@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wanyoike Hostels — Visitor Check-In System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0f1720;
+    --bg-alt: #0c131b;
+    --surface: #16212c;
+    --surface-2: #1c2934;
+    --text: #eef2f5;
+    --text-dim: #93a3b1;
+    --text-faint: #5b6b78;
+    --brass: #c89b3c;
+    --brass-soft: rgba(200,155,60,0.14);
+    --green: #5fb88f;
+    --green-soft: rgba(95,184,143,0.14);
+    --rose: #d97a6c;
+    --rose-soft: rgba(217,122,108,0.14);
+    --line: rgba(238,242,245,0.09);
+    --line-strong: rgba(238,242,245,0.18);
+    --amber: #d9a13c;
+    --amber-soft: rgba(217,161,60,0.16);
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  body::before{
+    content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background: radial-gradient(ellipse 900px 500px at 10% -10%, rgba(200,155,60,0.07), transparent 60%),
+                radial-gradient(ellipse 700px 500px at 100% 0%, rgba(95,184,143,0.05), transparent 60%);
+  }
+  .wrap{ max-width: 1180px; margin:0 auto; padding: 0 28px; position:relative; z-index:1; }
+  h1,h2,h3{ font-family:'Zilla Slab', serif; font-weight:600; letter-spacing:-0.01em; }
+  .mono{ font-family:'JetBrains Mono', monospace; }
+
+  /* ---- header ---- */
+  header.topbar{
+    border-bottom: 1px solid var(--line);
+    background: rgba(15,23,32,0.85);
+    backdrop-filter: blur(10px);
+    position: sticky; top:0; z-index: 40;
+  }
+  .topbar-inner{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 0; gap: 20px; flex-wrap: wrap;
+  }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:8px;
+    background: linear-gradient(135deg, var(--brass), #8a6a23);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Zilla Slab', serif; font-weight:700; font-size:17px; color:#0f1720;
+  }
+  .brand h1{ font-size:19px; line-height:1.1; }
+  .brand span{ display:block; font-size:11.5px; color: var(--text-dim); font-family:'JetBrains Mono',monospace; letter-spacing:.03em; margin-top:2px; }
+
+  .staff-row{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .staff-field{
+    display:flex; align-items:center; gap:8px;
+    background: var(--surface); border:1px solid var(--line);
+    border-radius: 8px; padding: 8px 12px;
+  }
+  .staff-field label{ font-size:11px; color:var(--text-dim); font-family:'JetBrains Mono',monospace; }
+  .staff-field input{
+    background:transparent; border:none; color:var(--text); font-size:13.5px; width:120px;
+    font-family:'Inter',sans-serif;
+  }
+  .staff-field input:focus{ outline:none; }
+  .clock{
+    font-family:'JetBrains Mono', monospace; font-size: 12.5px; color: var(--text-dim);
+    border:1px solid var(--line); border-radius:8px; padding:8px 12px; white-space:nowrap;
+  }
+
+  /* ---- stats ---- */
+  .stats{
+    display:grid; grid-template-columns: repeat(5,1fr); gap:16px;
+    margin: 28px 0;
+  }
+  .stat-card{
+    background: var(--surface); border:1px solid var(--line); border-radius:12px;
+    padding: 20px 22px;
+  }
+  .stat-card .label{ font-size:11.5px; color:var(--text-dim); font-family:'JetBrains Mono',monospace; letter-spacing:.05em; text-transform:uppercase; margin-bottom:10px; }
+  .stat-card .value{ font-family:'Zilla Slab',serif; font-size:32px; font-weight:600; }
+  .stat-card.in .value{ color: var(--green); }
+  .stat-card.out .value{ color: var(--text-dim); }
+  .stat-card.warn{ border-color: rgba(217,161,60,0.35); }
+  .stat-card.warn .value{ color: var(--amber); }
+  @media (max-width: 980px){ .stats{ grid-template-columns: repeat(3,1fr); } }
+  @media (max-width: 600px){ .stats{ grid-template-columns: repeat(2,1fr); } }
+
+  /* ---- action row ---- */
+  .action-row{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    flex-wrap:wrap; margin-bottom: 22px;
+  }
+  .search-box{
+    flex:1; min-width:220px; max-width:380px;
+    display:flex; align-items:center; gap:10px;
+    background: var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding: 11px 14px;
+  }
+  .search-box input{
+    background:transparent; border:none; color:var(--text); font-size:14px; width:100%;
+    font-family:'Inter',sans-serif;
+  }
+  .search-box input:focus{ outline:none; }
+  .search-box svg{ flex-shrink:0; opacity:.5; }
+
+  .filter-tabs{ display:flex; gap:8px; }
+  .filter-tabs button{
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    background:transparent; border:1px solid var(--line); color:var(--text-dim);
+    padding: 9px 14px; border-radius:8px; cursor:pointer; transition: all .2s ease;
+  }
+  .filter-tabs button.active{ border-color: var(--brass); color: var(--brass); background: var(--brass-soft); }
+  .filter-tabs button:hover{ border-color: var(--line-strong); }
+
+  .btn-checkin{
+    font-family:'JetBrains Mono',monospace; font-size:13.5px; font-weight:500;
+    background: var(--brass); color:#0f1720; border:none; border-radius:10px;
+    padding: 13px 22px; cursor:pointer; display:flex; align-items:center; gap:8px;
+    transition: transform .2s ease, background .2s ease;
+  }
+  .btn-checkin:hover{ transform: translateY(-2px); background:#dcae54; }
+
+  .btn-export{
+    font-family:'JetBrains Mono',monospace; font-size:13px;
+    background:transparent; border:1px solid var(--line-strong); color:var(--text);
+    padding: 12px 18px; border-radius:10px; cursor:pointer; display:flex; align-items:center; gap:8px;
+    transition: all .2s ease;
+  }
+  .btn-export:hover{ border-color: var(--green); color: var(--green); }
+
+  .threshold-field{
+    display:flex; align-items:center; gap:8px;
+    background: var(--surface); border:1px solid var(--line); border-radius:8px;
+    padding: 8px 12px;
+  }
+  .threshold-field label{ font-size:11px; color:var(--text-dim); font-family:'JetBrains Mono',monospace; white-space:nowrap; }
+  .threshold-field input{
+    background:transparent; border:none; color:var(--text); font-size:13.5px; width:34px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .threshold-field input:focus{ outline:none; }
+
+  /* ---- log grid ---- */
+  .log-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(290px,1fr));
+    gap: 16px; padding-bottom: 60px;
+  }
+  .empty-state{
+    grid-column: 1/-1;
+    text-align:center; padding: 70px 20px; color: var(--text-faint);
+    border: 1px dashed var(--line-strong); border-radius:14px;
+  }
+  .empty-state h3{ color: var(--text-dim); margin-bottom:8px; font-size:18px; }
+  .empty-state p{ font-size:13.5px; }
+
+  .badge-card{
+    background: var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding: 0; overflow:hidden;
+    transition: border-color .2s ease, transform .2s ease;
+    position:relative;
+  }
+  .badge-card:hover{ border-color: var(--line-strong); transform: translateY(-2px); }
+  .badge-card.status-in{ border-left: 3px solid var(--green); }
+  .badge-card.status-out{ border-left: 3px solid var(--text-faint); }
+  .badge-card.status-overstay{ border-left: 3px solid var(--amber); background: linear-gradient(180deg, rgba(217,161,60,0.06), transparent 40%); }
+
+  .badge-top{ display:flex; gap:14px; padding: 18px 18px 14px; }
+  .badge-photo{
+    width:52px; height:52px; border-radius:10px; flex-shrink:0;
+    background: var(--surface-2); border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Zilla Slab',serif; font-weight:600; font-size:18px; color: var(--text-dim);
+    overflow:hidden;
+  }
+  .badge-photo img{ width:100%; height:100%; object-fit:cover; }
+  .badge-id h3{ font-size:16.5px; margin-bottom:3px; }
+  .badge-id .room{ font-family:'JetBrains Mono',monospace; font-size:11.5px; color: var(--brass); }
+
+  .status-chip{
+    font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.04em;
+    padding: 4px 9px; border-radius:100px; text-transform:uppercase;
+    margin-left:auto; height:fit-content; white-space:nowrap;
+  }
+  .status-chip.in{ background: var(--green-soft); color: var(--green); }
+  .status-chip.out{ background: var(--rose-soft); color: var(--rose); }
+  .status-chip.overstay{ background: var(--amber-soft); color: var(--amber); }
+  .status-chip.autoclosed{ background: rgba(147,163,177,0.16); color: var(--text-dim); }
+
+  .host-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:'JetBrains Mono',monospace; font-size:11px; color: var(--text-dim);
+    background: var(--surface-2); border:1px solid var(--line); border-radius:7px;
+    padding: 5px 9px; margin: 0 18px 12px;
+  }
+  .host-tag b{ color: var(--text); font-weight:500; }
+  .auto-note{
+    font-size: 11px; color: var(--text-faint); padding: 0 18px 12px;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  .badge-body{ padding: 0 18px 16px; }
+  .badge-row{
+    display:flex; justify-content:space-between; font-size:12.5px;
+    padding: 7px 0; border-top: 1px solid var(--line); color: var(--text-dim);
+  }
+  .badge-row:first-child{ border-top:none; }
+  .badge-row .v{ color: var(--text); font-family:'JetBrains Mono',monospace; font-size:12px; }
+
+  .badge-foot{
+    padding: 13px 18px; border-top:1px solid var(--line);
+    display:flex; justify-content:flex-end;
+  }
+  .btn-checkout{
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    background:transparent; border:1px solid var(--line-strong); color:var(--text);
+    padding: 8px 14px; border-radius:8px; cursor:pointer; transition: all .2s ease;
+  }
+  .btn-checkout:hover{ border-color: var(--rose); color: var(--rose); }
+  .btn-checkout:disabled{ opacity:.4; cursor:default; }
+  .btn-checkout:disabled:hover{ border-color: var(--line-strong); color: var(--text); }
+
+  /* ---- modal ---- */
+  .overlay{
+    position:fixed; inset:0; background: rgba(8,12,17,0.72); backdrop-filter: blur(3px);
+    display:flex; align-items:center; justify-content:center; z-index:100;
+    opacity:0; pointer-events:none; transition: opacity .2s ease;
+    padding: 20px;
+  }
+  .overlay.show{ opacity:1; pointer-events:auto; }
+  .modal{
+    background: var(--surface); border:1px solid var(--line-strong); border-radius:16px;
+    width: 100%; max-width: 460px; padding: 28px; max-height: 88vh; overflow-y:auto;
+    transform: translateY(14px); transition: transform .25s ease;
+  }
+  .overlay.show .modal{ transform: translateY(0); }
+  .modal h2{ font-size:21px; margin-bottom: 4px; }
+  .modal .sub{ font-size:12.5px; color: var(--text-dim); margin-bottom: 22px; font-family:'JetBrains Mono',monospace; }
+  .field{ margin-bottom: 16px; }
+  .field label{ display:block; font-size:12px; color: var(--text-dim); margin-bottom:7px; font-family:'JetBrains Mono',monospace; }
+  .field input{
+    width:100%; background: var(--surface-2); border:1px solid var(--line); border-radius:9px;
+    padding: 11px 13px; color: var(--text); font-size:14px; font-family:'Inter',sans-serif;
+  }
+  .field input:focus{ outline:none; border-color: var(--brass); }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .photo-field{
+    display:flex; align-items:center; gap:12px;
+    background: var(--surface-2); border:1px solid var(--line); border-radius:9px; padding:10px 13px;
+  }
+  .photo-preview{
+    width:42px; height:42px; border-radius:8px; background: var(--surface);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;
+    border:1px solid var(--line);
+  }
+  .photo-preview img{ width:100%; height:100%; object-fit:cover; }
+  .photo-field input[type=file]{ font-size:12px; color: var(--text-dim); width:100%; }
+  .modal-actions{ display:flex; gap:10px; margin-top: 22px; }
+  .btn-cancel{
+    flex:1; background:transparent; border:1px solid var(--line-strong); color:var(--text-dim);
+    padding:12px; border-radius:9px; cursor:pointer; font-family:'Inter',sans-serif; font-size:14px;
+  }
+  .btn-submit{
+    flex:1.4; background: var(--brass); border:none; color:#0f1720; font-weight:600;
+    padding:12px; border-radius:9px; cursor:pointer; font-family:'Inter',sans-serif; font-size:14px;
+    transition: background .2s ease;
+  }
+  .btn-submit:hover{ background:#dcae54; }
+  .form-error{ font-size:12.5px; color: var(--rose); margin-top:-8px; margin-bottom:14px; display:none; }
+  .form-error.show{ display:block; }
+
+  .toast{
+    position:fixed; bottom:26px; left:50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface); border:1px solid var(--line-strong); border-radius:10px;
+    padding: 13px 20px; font-size:13.5px; color: var(--text); z-index: 200;
+    opacity:0; pointer-events:none; transition: all .3s ease;
+    display:flex; align-items:center; gap:10px;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+  .toast .dot{ width:7px; height:7px; border-radius:50%; background: var(--green); flex-shrink:0; }
+
+  footer{
+    border-top:1px solid var(--line); padding: 22px 0 34px;
+    font-family:'JetBrains Mono',monospace; font-size:11.5px; color: var(--text-faint);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">W</div>
+      <div>
+        <h1>Wanyoike Hostels</h1>
+        <span>VISITOR CHECK-IN SYSTEM</span>
+      </div>
+    </div>
+    <div class="staff-row">
+      <div class="staff-field">
+        <label>Staff on duty</label>
+        <input type="text" id="staffName" placeholder="Your name" autocomplete="off">
+      </div>
+      <div class="clock mono" id="clock">--:--:--</div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div class="stats">
+    <div class="stat-card in">
+      <div class="label">Currently checked in</div>
+      <div class="value" id="statIn">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Checked in today</div>
+      <div class="value" id="statToday">0</div>
+    </div>
+    <div class="stat-card out">
+      <div class="label">Checked out today</div>
+      <div class="value" id="statOut">0</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="label">Overstaying</div>
+      <div class="value" id="statOverstay">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Total on record</div>
+      <div class="value" id="statTotal">0</div>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input type="text" id="searchInput" placeholder="Search by name or room…">
+    </div>
+    <div class="filter-tabs">
+      <button class="active" data-filter="all">All</button>
+      <button data-filter="in">Checked in</button>
+      <button data-filter="out">Checked out</button>
+      <button data-filter="overstay">Overstaying</button>
+    </div>
+    <div class="threshold-field">
+      <label>Overstay after</label>
+      <input type="number" id="thresholdInput" min="1" max="24" value="3">
+      <label>hrs</label>
+    </div>
+    <button class="btn-export" id="exportBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      Export CSV
+    </button>
+    <button class="btn-checkin" id="openModalBtn">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      Check in visitor
+    </button>
+  </div>
+
+  <div class="log-grid" id="logGrid"></div>
+
+</main>
+
+<footer>
+  <div class="wrap" style="display:flex; justify-content:space-between; width:100%; flex-wrap:wrap; gap:8px;">
+    <span>Wanyoike Hostels — Visitor Check-In System</span>
+    <span>Local storage only · no data leaves this browser</span>
+  </div>
+</footer>
+
+<!-- Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2>Check in a visitor</h2>
+    <div class="sub">RECORDED BY <span id="modalStaffTag">FRONT DESK</span></div>
+    <form id="checkinForm">
+      <div class="field">
+        <label>Full name</label>
+        <input type="text" id="vName" list="returningVisitors" required autocomplete="off">
+        <datalist id="returningVisitors"></datalist>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Room number</label>
+          <input type="text" id="vRoom" required autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="text" id="vPhone" required autocomplete="off">
+        </div>
+      </div>
+      <div class="field">
+        <label>Visiting (host / resident name)</label>
+        <input type="text" id="vHost" placeholder="Who are they here to see?" required autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="vEmail" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>ID photo (optional)</label>
+        <div class="photo-field">
+          <div class="photo-preview" id="photoPreview">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+          </div>
+          <input type="file" id="vPhoto" accept="image/*">
+        </div>
+      </div>
+      <div class="form-error" id="formError">Name, room, phone, and host are required.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn-submit">Check in</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="dot"></span><span id="toastText">Visitor checked in</span></div>
+
+<script>
+  // ---- Visitor model (matches the project report spec) ----
+  class Visitor {
+    constructor(name, room, email, phone, idPhoto, checkInTime, checkOutTime = null, hostName = '', autoClosed = false) {
+      this.id = 'v_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+      this.name = name;
+      this.room = room;
+      this.email = email;
+      this.phone = phone;
+      this.idPhoto = idPhoto;
+      this.checkInTime = checkInTime;
+      this.checkOutTime = checkOutTime;
+      this.hostName = hostName;
+      this.autoClosed = autoClosed;
+    }
+  }
+
+  const STORAGE_KEY = 'wanyoike_visitors';
+
+  function loadVisitors(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch(e){ return []; }
+  }
+  function saveVisitors(visitors){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(visitors));
+  }
+
+  function checkInVisitor(visitor){
+    const visitors = loadVisitors();
+    visitors.push(visitor);
+    saveVisitors(visitors);
+  }
+  function checkOutVisitor(id){
+    const visitors = loadVisitors();
+    const visitor = visitors.find(v => v.id === id);
+    if(visitor && !visitor.checkOutTime){
+      visitor.checkOutTime = new Date().toISOString();
+      saveVisitors(visitors);
+    }
+  }
+
+  // Auto-checkout: anyone still "checked in" from a previous calendar day
+  // is closed out at end-of-day so the log doesn't accumulate phantom visitors
+  // who left without checking out.
+  function runAutoCheckout(){
+    const visitors = loadVisitors();
+    const todayStr = new Date().toDateString();
+    let closedCount = 0;
+    visitors.forEach(v=>{
+      if(!v.checkOutTime && new Date(v.checkInTime).toDateString() !== todayStr){
+        const checkIn = new Date(v.checkInTime);
+        const endOfDay = new Date(checkIn.getFullYear(), checkIn.getMonth(), checkIn.getDate(), 23, 59, 0);
+        v.checkOutTime = endOfDay.toISOString();
+        v.autoClosed = true;
+        closedCount++;
+      }
+    });
+    if(closedCount > 0) saveVisitors(visitors);
+    return closedCount;
+  }
+
+  // ---- UI state ----
+  let currentFilter = 'all';
+  let searchTerm = '';
+  let pendingPhoto = null;
+
+  const logGrid = document.getElementById('logGrid');
+  const overlay = document.getElementById('overlay');
+  const openModalBtn = document.getElementById('openModalBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  const checkinForm = document.getElementById('checkinForm');
+  const formError = document.getElementById('formError');
+  const searchInput = document.getElementById('searchInput');
+  const toast = document.getElementById('toast');
+  const toastText = document.getElementById('toastText');
+  const staffNameInput = document.getElementById('staffName');
+  const modalStaffTag = document.getElementById('modalStaffTag');
+  const thresholdInput = document.getElementById('thresholdInput');
+  const exportBtn = document.getElementById('exportBtn');
+
+  thresholdInput.value = localStorage.getItem('wanyoike_threshold_hrs') || '3';
+  thresholdInput.addEventListener('input', ()=>{
+    localStorage.setItem('wanyoike_threshold_hrs', thresholdInput.value);
+    render();
+  });
+
+  staffNameInput.value = localStorage.getItem('wanyoike_staff_name') || '';
+  modalStaffTag.textContent = (staffNameInput.value || 'FRONT DESK').toUpperCase();
+  staffNameInput.addEventListener('input', ()=>{
+    localStorage.setItem('wanyoike_staff_name', staffNameInput.value);
+    modalStaffTag.textContent = (staffNameInput.value || 'FRONT DESK').toUpperCase();
+  });
+
+  function showToast(msg){
+    toastText.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(()=> toast.classList.remove('show'), 2400);
+  }
+
+  function fmtTime(iso){
+    if(!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+  }
+
+  function initials(name){
+    return name.trim().split(/\s+/).map(p=>p[0]).slice(0,2).join('').toUpperCase();
+  }
+
+  function render(){
+    const visitors = loadVisitors().slice().sort((a,b)=> new Date(b.checkInTime) - new Date(a.checkInTime));
+    const thresholdHrs = parseFloat(thresholdInput.value) || 3;
+    const thresholdMs = thresholdHrs * 60 * 60 * 1000;
+    const now = Date.now();
+
+    // stats
+    const todayStr = new Date().toDateString();
+    const inCount = visitors.filter(v=>!v.checkOutTime).length;
+    const todayIn = visitors.filter(v=> new Date(v.checkInTime).toDateString() === todayStr).length;
+    const todayOut = visitors.filter(v=> v.checkOutTime && new Date(v.checkOutTime).toDateString() === todayStr).length;
+    const overstayCount = visitors.filter(v=> !v.checkOutTime && (now - new Date(v.checkInTime).getTime()) > thresholdMs).length;
+    document.getElementById('statIn').textContent = inCount;
+    document.getElementById('statToday').textContent = todayIn;
+    document.getElementById('statOut').textContent = todayOut;
+    document.getElementById('statOverstay').textContent = overstayCount;
+    document.getElementById('statTotal').textContent = visitors.length;
+
+    // filter + search
+    let filtered = visitors;
+    if(currentFilter === 'in') filtered = filtered.filter(v=>!v.checkOutTime);
+    if(currentFilter === 'out') filtered = filtered.filter(v=>v.checkOutTime);
+    if(currentFilter === 'overstay') filtered = filtered.filter(v=> !v.checkOutTime && (now - new Date(v.checkInTime).getTime()) > thresholdMs);
+    if(searchTerm){
+      const q = searchTerm.toLowerCase();
+      filtered = filtered.filter(v=> v.name.toLowerCase().includes(q) || String(v.room).toLowerCase().includes(q) || (v.hostName||'').toLowerCase().includes(q));
+    }
+
+    if(filtered.length === 0){
+      logGrid.innerHTML = `<div class="empty-state">
+        <h3>No visitors here yet</h3>
+        <p>${visitors.length === 0 ? 'Check in your first visitor to start the log.' : 'Nothing matches your search or filter.'}</p>
+      </div>`;
+      return;
+    }
+
+    logGrid.innerHTML = filtered.map(v => {
+      const isOverstay = !v.checkOutTime && (now - new Date(v.checkInTime).getTime()) > thresholdMs;
+      const statusClass = v.checkOutTime ? 'status-out' : (isOverstay ? 'status-overstay' : 'status-in');
+      const chipClass = v.checkOutTime ? (v.autoClosed ? 'autoclosed' : 'out') : (isOverstay ? 'overstay' : 'in');
+      const chipLabel = v.checkOutTime ? (v.autoClosed ? 'Auto checked-out' : 'Checked out') : (isOverstay ? 'Overstaying' : 'Checked in');
+      const durationLabel = !v.checkOutTime ? durationSince(v.checkInTime) : '—';
+      return `
+      <div class="badge-card ${statusClass}">
+        <div class="badge-top">
+          <div class="badge-photo">${v.idPhoto ? `<img src="${v.idPhoto}" alt="${v.name}">` : initials(v.name)}</div>
+          <div class="badge-id">
+            <h3>${escapeHtml(v.name)}</h3>
+            <div class="room">ROOM ${escapeHtml(String(v.room))}</div>
+          </div>
+          <span class="status-chip ${chipClass}">${chipLabel}</span>
+        </div>
+        ${v.hostName ? `<div class="host-tag">Visiting <b>${escapeHtml(v.hostName)}</b></div>` : ''}
+        ${v.autoClosed ? `<div class="auto-note">⌁ closed automatically — visitor didn&#x2019;t check out before day&#x2019;s end</div>` : ''}
+        <div class="badge-body">
+          <div class="badge-row"><span>Phone</span><span class="v">${escapeHtml(v.phone || '—')}</span></div>
+          <div class="badge-row"><span>In</span><span class="v">${fmtTime(v.checkInTime)}</span></div>
+          <div class="badge-row"><span>Out</span><span class="v">${fmtTime(v.checkOutTime)}</span></div>
+          <div class="badge-row"><span>Duration</span><span class="v">${durationLabel}</span></div>
+        </div>
+        <div class="badge-foot">
+          <button class="btn-checkout" data-id="${v.id}" ${v.checkOutTime ? 'disabled' : ''}>
+            ${v.checkOutTime ? 'Checked out' : 'Check out'}
+          </button>
+        </div>
+      </div>
+    `;
+    }).join('');
+
+    logGrid.querySelectorAll('.btn-checkout:not(:disabled)').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        checkOutVisitor(btn.dataset.id);
+        showToast('Visitor checked out');
+        render();
+      });
+    });
+  }
+
+  function durationSince(iso){
+    const ms = Date.now() - new Date(iso).getTime();
+    const hrs = Math.floor(ms / 3600000);
+    const mins = Math.floor((ms % 3600000) / 60000);
+    if(hrs <= 0) return `${mins}m`;
+    return `${hrs}h ${mins}m`;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---- modal handling ----
+  function openModal(){
+    populateReturningVisitors();
+    overlay.classList.add('show');
+    document.getElementById('vName').focus();
+  }
+  function closeModal(){
+    overlay.classList.remove('show');
+    checkinForm.reset();
+    pendingPhoto = null;
+    document.getElementById('photoPreview').innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity="0.5"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="9" cy="9" r="2"></circle><path d="M21 15l-5-5L5 21"></path></svg>`;
+    formError.classList.remove('show');
+  }
+
+  openModalBtn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && overlay.classList.contains('show')) closeModal(); });
+
+  document.getElementById('vPhoto').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      pendingPhoto = ev.target.result;
+      document.getElementById('photoPreview').innerHTML = `<img src="${pendingPhoto}" alt="preview">`;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ---- returning visitor autocomplete ----
+  function populateReturningVisitors(){
+    const visitors = loadVisitors();
+    const seen = new Map();
+    visitors.forEach(v=>{
+      // keep the most recent record per unique name
+      const key = v.name.trim().toLowerCase();
+      const existing = seen.get(key);
+      if(!existing || new Date(v.checkInTime) > new Date(existing.checkInTime)){
+        seen.set(key, v);
+      }
+    });
+    const datalist = document.getElementById('returningVisitors');
+    datalist.innerHTML = Array.from(seen.values())
+      .map(v => `<option value="${escapeHtml(v.name)}">`).join('');
+    window._returningVisitorMap = seen;
+  }
+
+  document.getElementById('vName').addEventListener('input', (e)=>{
+    const map = window._returningVisitorMap;
+    if(!map) return;
+    const match = map.get(e.target.value.trim().toLowerCase());
+    if(match){
+      document.getElementById('vPhone').value = match.phone || '';
+      document.getElementById('vEmail').value = match.email || '';
+      if(match.idPhoto){
+        pendingPhoto = match.idPhoto;
+        document.getElementById('photoPreview').innerHTML = `<img src="${match.idPhoto}" alt="preview">`;
+      }
+      showToast(`Returning visitor — autofilled ${match.name}'s details`);
+    }
+  });
+
+  checkinForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const name = document.getElementById('vName').value.trim();
+    const room = document.getElementById('vRoom').value.trim();
+    const phone = document.getElementById('vPhone').value.trim();
+    const email = document.getElementById('vEmail').value.trim();
+    const hostName = document.getElementById('vHost').value.trim();
+
+    if(!name || !room || !phone || !hostName){
+      formError.classList.add('show');
+      return;
+    }
+    formError.classList.remove('show');
+
+    const visitor = new Visitor(name, room, email, phone, pendingPhoto, new Date().toISOString(), null, hostName, false);
+    checkInVisitor(visitor);
+    showToast(`${name} checked in to see ${hostName}`);
+    closeModal();
+    render();
+  });
+
+  // ---- search & filters ----
+  searchInput.addEventListener('input', ()=>{ searchTerm = searchInput.value.trim(); render(); });
+  document.querySelectorAll('.filter-tabs button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.filter-tabs button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      render();
+    });
+  });
+
+  // ---- CSV export ----
+  exportBtn.addEventListener('click', ()=>{
+    const visitors = loadVisitors().slice().sort((a,b)=> new Date(b.checkInTime) - new Date(a.checkInTime));
+    if(visitors.length === 0){ showToast('No visitor records to export'); return; }
+    const headers = ['Name','Room','Visiting (Host)','Phone','Email','Check-in','Check-out','Status'];
+    const rows = visitors.map(v => [
+      v.name, v.room, v.hostName || '', v.phone || '', v.email || '',
+      v.checkInTime ? new Date(v.checkInTime).toLocaleString('en-GB') : '',
+      v.checkOutTime ? new Date(v.checkOutTime).toLocaleString('en-GB') : '',
+      v.checkOutTime ? 'Checked out' : 'Checked in'
+    ]);
+    const csvEscape = (val)=> `"${String(val).replace(/"/g,'""')}"`;
+    const csv = [headers, ...rows].map(r => r.map(csvEscape).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `wanyoike-visitor-log-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Visitor log exported');
+  });
+
+  // ---- clock ----
+  function tickClock(){
+    document.getElementById('clock').textContent = new Date().toLocaleString('en-GB', {
+      weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit'
+    });
+  }
+  tickClock();
+  setInterval(tickClock, 1000);
+
+  // re-render periodically so overstay status and live durations stay accurate
+  setInterval(()=>{ runAutoCheckout(); render(); }, 30000);
+
+  const autoClosedOnLoad = runAutoCheckout();
+  render();
+  if(autoClosedOnLoad > 0){
+    showToast(`Auto-closed ${autoClosedOnLoad} visitor${autoClosedOnLoad > 1 ? 's' : ''} from a previous day`);
+  }
+</script>
+
+</body>
+</html>
